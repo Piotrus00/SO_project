@@ -5,55 +5,107 @@
 #include <time.h>
 #include <errno.h>
 #include <string.h>
-#include <pthread.h>  // Dodajemy bibliotekę wątków
+#include <pthread.h>
+#include <fcntl.h>
 
 #include "queue.h"
+#include "pamiec_dzielona.h"
 #include "structs.h"
 
-int TK = 10;
 
-void* narciarz_thread(void* arg)
-{
-    // pthread_t my_tid = pthread_self();
+int TK = 15;
+int pamiec;
+int odlaczenie1;
+int odlaczenie2;
+int *adres;
+int pd, pd_vip;
 
-    // Rzutujemy argument na wskaźnik do Karnet
+pthread_mutex_t queue_mutex;
+
+// Tablica dynamiczna dla identyfikatorów wątków
+pthread_t *threads = NULL;
+size_t threads_count = 0;
+size_t threads_capacity = 10;
+
+void* narciarz_thread(void* arg) {
     struct Karnet *k = (struct Karnet*) arg;
 
-    printf("Narciarz ID=%d, VIP=%d, Childs=%d, Time=%.2f\n",
-           k->id,
-           k->vip_status,
-           k->childs,
-           k->time);
+    key_t key_pd_narciarz_pracownik = 125;
+    upd(key_pd_narciarz_pracownik);
+    upa();
 
-    //sprawdzic pozostaly czas karnetu odjac czas zjazdu zapisac do pliku kolejka odczytuje albo jeszcze jeden program peron dolny niapsac
-    //ktory czyta dane z pliku(4 na raz) i wpuszcza na peron dolny jezeli N, po odczytaniu z pliku, thread oposcic semafor
-    //tu pewnie do raportu jakies godziny wpuszczenia znowu semafor na kolejke opuszczany po wejsciu i transporcie na gore
-    //dodac zjazdy trasami i to wszystko w petle
+    if (k->vip_status) {
+        pthread_mutex_lock(&queue_mutex);
+        write(pd_vip, k, sizeof(struct Karnet));
+        pthread_mutex_unlock(&queue_mutex);
+    } else {
+        pthread_mutex_lock(&queue_mutex);
+        write(pd, k, sizeof(struct Karnet));
+        pthread_mutex_unlock(&queue_mutex);
+    }
 
+
+    while (k->id != *adres) {
+        usleep(10000);
+    }
+
+
+
+    printf("Narciarz id=%d vip=%d dziala!\n", k->id, k->vip_status);
     free(k);
     return NULL;
 }
 
+
+void add_thread(pthread_t tid) {
+    if (threads_count == threads_capacity) {
+        threads_capacity *= 2;
+        threads = realloc(threads, threads_capacity * sizeof(pthread_t));
+        if (!threads) {
+            perror("realloc failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+    threads[threads_count++] = tid;
+}
+
 int main() {
+    if (pthread_mutex_init(&queue_mutex, NULL) != 0) {
+        perror("pthread_mutex_init");
+        exit(EXIT_FAILURE);
+    }
+
+    pd = open("/home/kali/CLionProjects/untitled3/cmake-build-debug/fifo", O_WRONLY);
+    if (pd == -1) {
+        perror("[FIFO] Otwarcie zapisu");
+        exit(EXIT_FAILURE);
+    }
+    pd_vip = open("/home/kali/CLionProjects/untitled3/cmake-build-debug/fifo_vip", O_WRONLY);
+    if (pd_vip == -1) {
+        perror("[FIFO] Otwarcie zapisu");
+        exit(EXIT_FAILURE);
+    }
+
     time_t start_time, current_time;
     time(&start_time);
     struct msgBuf buf;
     int end_of_work_kajser = 0;
 
-    // Otwieramy (lub tworzymy) kolejkę komunikatów
-    int msgid=odbierz_kolejke();
+    int msgid = odbierz_kolejke();
 
-    printf("[Narciarz PID=%d] Otwarta kolejka komunikatow ID=%d\n", getpid(), msgid);
+    // Inicjalizacja tablicy identyfikatorów wątków
+    threads = malloc(threads_capacity * sizeof(pthread_t));
+    if (!threads) {
+        perror("malloc failed");
+        exit(EXIT_FAILURE);
+    }
 
     while (1) {
-        // Sprawdzamy, czy minął czas (TK sekund)
         time(&current_time);
         if (difftime(current_time, start_time) >= TK) {
-            // Jeśli tak, kończymy pętlę
             break;
         }
 
-        // Odczytujemy wiadomość z kolejki
         int ret = msgrcv(msgid, &buf, sizeof(buf.kar), 0, 0);
         if (ret == -1) {
             if (errno == EINTR) {
@@ -63,25 +115,21 @@ int main() {
             break;
         }
 
-        // gdy kasjer sie konczy przesyla karnet id=-1 gdy program otrzyma 3 wychodzi z petli
         if (buf.kar.id != -1) {
-            // Alokujemy pamięć na nowy Karnet
             struct Karnet *nowyKarnet = malloc(sizeof(struct Karnet));
             if (!nowyKarnet) {
                 perror("malloc error");
                 break;
             }
-            // Kopiujemy dane z bufora
             memcpy(nowyKarnet, &buf.kar, sizeof(struct Karnet));
 
-            // Tworzenie wątku
             pthread_t tid;
             int err = pthread_create(&tid, NULL, narciarz_thread, nowyKarnet);
             if (err != 0) {
                 fprintf(stderr, "Blad pthread_create: %s\n", strerror(err));
                 free(nowyKarnet);
             } else {
-                pthread_detach(tid);
+                add_thread(tid);
             }
         } else {
             end_of_work_kajser++;
@@ -91,6 +139,13 @@ int main() {
         }
     }
 
-    printf("[Narciarz PID=%d] Koniec pracy.\n", getpid());
+    for (size_t i = 0; i < threads_count; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    printf("[Narciarz]farjant");
+    free(threads);
+    close(pd);
+    pthread_mutex_destroy(&queue_mutex);
+    odlacz_pamiec();
     return 0;
 }
