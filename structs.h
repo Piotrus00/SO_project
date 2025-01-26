@@ -1,3 +1,5 @@
+
+
 #ifndef STRUCTS_H
 #define STRUCTS_H
 
@@ -6,7 +8,9 @@ struct Karnet {
     int id;
     int vip_status; // 1 - vip, 0 - zwykly
     int childs;
-    double time;
+    int hours;
+    int min;
+    int sec;
 };
 
 // STRUKTURA WIADOMOŚCI DLA KOLEJKI

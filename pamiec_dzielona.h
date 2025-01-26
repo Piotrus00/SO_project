@@ -1,3 +1,7 @@
+//
+// Created by kali on 1/17/25.
+//
+
 #ifndef PAMIEC_DZIELONA_H
 #define PAMIEC_DZIELONA_H
 
@@ -13,8 +17,9 @@ extern int odlaczenie2;
 extern int *adres;
 
 
-void upd(int key) {
-    pamiec = shmget(key, 10, 0777 | IPC_CREAT);
+
+void upd(int key, int size) {
+    pamiec = shmget(key, size, 0600 | IPC_CREAT);
     if (pamiec == -1) {
         printf("Problemy z utworzeniem pamieci dzielonej.\n");
         exit(EXIT_FAILURE);
@@ -46,5 +51,14 @@ void odlacz_pamiec() {
     }
 }
 
-
+void upd_nietworz(int key, int size) {
+    pamiec = shmget(key, size, 0600);
+    if (pamiec == -1) {
+        printf("Problemy z utworzeniem pamieci dzielonej.\n");
+        exit(EXIT_FAILURE);
+    }
+    // else {
+    // printf("Pamiec dzielona zostala utworzona : %d\n", pamiec);
+    // }
+}
 #endif //PAMIEC_DZIELONA_H

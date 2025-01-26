@@ -4,67 +4,111 @@
 #include <sys/msg.h>
 #include <string.h>
 
+#include "functions_kasjer.h"
 #include "queue.h"
 #include "pamiec_dzielona.h"
+#include "pamiec_dzielona_2.h"
 #include "semafory.h"
 #include "structs.h"
 
-
 // Struktura do wysłania karnetu do kolejki VIP/normal
+
 struct MsgNarciarz {
     long mtype;
-    struct Karnet kar;
+    struct Karnet k;
 };
 
-int TK = 15;
+struct MsgBufDone {
+    long mtype;        // k.id
+    int id;   // powtórzone k.id
+};
+
+int N = 20;
+
 int pamiec;
 int odlaczenie1;
 int odlaczenie2;
 int *adres;
 int msgid_normal, msgid_vip;
 
+int pamiec2;
+int odlaczenie3;
+int odlaczenie4;
+int *adres2;
+
+
+int czy_czas_na_karnecie(struct Karnet k) {
+    if (adres2[0]==-1) {
+        return 0;
+    }
+    if (k.hours < adres2[0] ||
+        (k.hours == adres2[0] && k.min < adres2[1]) ||
+        (k.hours == adres2[0] && k.min == adres2[1] && k.sec <= adres2[2])) {
+        return 0;
+        }
+    return 1;
+}
+
 
 int main(){
     key_t kol_kasjer_narciarz = 9000;
     key_t kol_nrm_narciarz_prac = 9001;
     key_t kol_vip_narciarz_prac = 9002;
-    key_t key_pd_narciarz_pracownik = 125;
+    key_t kol_narciarz_krzeselka = 9004;
+
     key_t s_narciarz_narciarz = 356;
+    key_t s_narciarz_pracownik = 357;
+
+
+    key_t key_pd_narciarz_pracownik = 125;
+    key_t pd_time_man = 202;
+
+    upd_nietworz(key_pd_narciarz_pracownik, 20);
+    upa();
+    upd2(pd_time_man);
+    upa2();
 
 
     struct msgBuf buf;
 
-    int msgid = odbierz_kolejke(kol_kasjer_narciarz);
+    int msgid = dodaj_kolejke(kol_kasjer_narciarz);
+    int msgid_vip = dodaj_kolejke(kol_vip_narciarz_prac);
+    int msgid_normal = dodaj_kolejke(kol_nrm_narciarz_prac);
+    int msgid_con = dodaj_kolejke(kol_narciarz_krzeselka);
 
-    int ret = msgrcv(msgid, &buf, sizeof(buf.kar), 0, 0);
-    if (ret == -1) {
+    int s_crit_zone = dodaj_nowy_semafor(s_narciarz_narciarz, 3);
+    int s_peron = dodaj_nowy_semafor(s_narciarz_pracownik, 1);
+
+    //pobieramy dane narciarza
+    if (msgrcv(msgid, &buf, sizeof(buf.kar), 0, 0) == -1){
         perror("[Narciarz] Blad msgrcv");
         exit(EXIT_FAILURE);
     }
-
     struct Karnet k = buf.kar;
 
-    upd(key_pd_narciarz_pracownik);
-    upa();
-
-
-
-    int msgid_vip = msgget(kol_vip_narciarz_prac, 0666);
-    if (msgid_vip == -1) {
-        perror("[Pracownik] Blad msgget (otwieranie kolejki)");
-        exit(EXIT_FAILURE);
-    }
-
-    int msgid_normal = msgget(kol_nrm_narciarz_prac, 0666);
-    if (msgid_normal == -1) {
-        perror("[Pracownik] Blad msgget (otwieranie kolejki)");
-        exit(EXIT_FAILURE);
-    }
-
-    int s_crit_zone = dodaj_nowy_semafor(s_narciarz_narciarz, 1);
     semafor_v(s_crit_zone,0,1);
+    semafor_v(s_crit_zone,1,1);
+    //ilosc bramek 4
+    semctl(s_crit_zone, 2, SETVAL, 4);
+
+
+    semafor_v(s_peron,0,1);
+
+
+    semafor_p(s_crit_zone,1);
+    FILE *plik = fopen("karnet_dane.txt", "a");
+    if (plik == NULL) {
+        perror("Blad otwarcia pliku");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(plik, "ID: %d, VIP: %d, Godzina: %02d:%02d:%02d\n", k.id, k.vip_status, k.hours, k.min, k.sec);
+    fclose(plik);
+    semafor_v(s_crit_zone,1,1);
+
+
     struct MsgNarciarz msg;
-    memcpy(&msg.kar, &k, sizeof(struct Karnet));
+    memcpy(&msg.k, &k, sizeof(struct Karnet));
+
 
     // Ustalamy typ komunikatu (np. 1,2,3) zależnie od liczby dzieci
     if (k.childs == 2) {
@@ -74,34 +118,95 @@ int main(){
     } else {
         msg.mtype = 1;
     }
+    int grupa = k.childs + 1;
 
+    while (czy_czas_na_karnecie(k)) {
 
-    // Wysyłamy do kolejki normalnej albo VIP
-    semafor_p(s_crit_zone,0);
-    if (k.vip_status){
-        if (msgsnd(msgid_vip, &msg, sizeof(msg.kar), 0) == -1) {
-            perror("[Narciarz] msgsnd vip");
+        //symulacja 4 bramek
+
+         semafor_p(s_crit_zone, 2);
+
+        // sprawdzamy dostepnosc miejsc na peronie
+         while (1) {
+             printf("%d\n",adres[3]);
+             semafor_p(s_peron, 0);
+             if (adres[3] + grupa <= N) {
+                 adres[3] += grupa;
+                 semafor_v(s_peron, 0, 1);
+                 break;
+             }
+             semafor_v(s_peron,0,1);
+             usleep(10000);
+         }
+
+        // Wysyłamy do kolejki normalnej albo VIP
+        semafor_p(s_crit_zone, 0);
+        if (k.vip_status) {
+            if (msgsnd(msgid_vip, &msg, sizeof(msg.k), 0) == -1) {
+                perror("[Narciarz] msgsnd vip");
+            }
+        } else {
+            if (msgsnd(msgid_normal, &msg, sizeof(msg.k), 0) == -1) {
+                perror("[Narciarz] msgsnd normal");
+            }
         }
-    } else {
-        if (msgsnd(msgid_normal, &msg, sizeof(msg.kar), 0) == -1) {
-            perror("[Narciarz] msgsnd normal");
+        semafor_v(s_crit_zone,0,1);
+
+        //gdy dostanie sie do kolejki to kolejni moga przejsc przez bramki
+        semafor_v(s_crit_zone,2, 1);
+
+        //Czekamy, aż ID narciarza pojawi się w kolejce czyli wysiadzie z krzeselka na gorze
+        struct MsgBufDone msgd;
+        if (msgrcv(msgid_con, &msgd, sizeof(msgd.id), k.id, 0) == -1) {
+            perror("msgrcv error");
+            exit(EXIT_FAILURE);
+        }
+
+        //Zjazd!!!
+        int chances[10] = {1,1,1,2,2,2,3,3,3,4};
+        int pathing;
+        pathing = chances[generateRandomNumber(0, 9)];
+        if (pathing == 1) {
+            //Trasa T1
+            usleep(50000);
+        }
+        if (pathing == 2) {
+            //Trasa T2
+            usleep(70000);
+        }
+        if (pathing == 3) {
+            //Trasa T3
+            usleep(90000);
         }
     }
-    semafor_v(s_crit_zone, 0, 1);
 
-    // printf("Narciarz id=%d vip=%d dziala!\n", k.id, k.vip_status);
 
-    //Czekamy, aż ID narciarza pojawi się w tablicy adres[]
-    while (k.id != adres[0] && k.id != adres[1] && k.id != adres[2]){
-        usleep(10000);
+
+
+
+
+    semafor_p(s_crit_zone,1);
+    FILE *plik2 = fopen("karnet_wyjscie.txt", "a");
+    if (plik2 == NULL) {
+        perror("Blad otwarcia pliku");
+        exit(EXIT_FAILURE);
     }
-    printf("Narciarz id=%d vip=%d dziala!\n", k.id, k.vip_status);
+    fprintf(plik2, "ID: %d, VIP: %d, Godzina Karnet: %02d:%02d:%02d Godzina Wyjscia: %02d:%02d:%02d\n",
+        k.id, k.vip_status,
+        k.hours, k.min, k.sec,
+        adres2[0], adres2[1], adres2[2]
+        );
+    fclose(plik2);
+    semafor_v(s_crit_zone,1,1);
     odlaczenie1 = shmdt(adres);
     if (odlaczenie1 == -1) {
         printf("Problemy z odlaczeniem pamieci dzielonej.\n");
         exit(EXIT_FAILURE);
     }
-    return 0;
+    odlaczenie3 = shmdt(adres2);
+    if (odlaczenie3 == -1) {
+        printf("Problemy z odlaczeniem pamieci dzielonej.\n");
+        exit(EXIT_FAILURE);
+    }
+    exit(EXIT_SUCCESS);
 }
-
-//tutaj dodac semafor ze max 4 na raz wchodzi i dodac zjazdy

@@ -1,3 +1,7 @@
+//
+// Created by kali on 1/17/25.
+//
+
 #ifndef QUEUE_H
 #define QUEUE_H
 
@@ -8,7 +12,7 @@
 
 
 int utworz_kolejke(int key) {
-    int id = msgget(key, 0666 | IPC_CREAT);
+    int id = msgget(key, 0600 | IPC_CREAT);
     if (id == -1) {
         perror("Nie moglem utworzyc kolejki komunikatow");
         exit(EXIT_FAILURE);
@@ -18,11 +22,9 @@ int utworz_kolejke(int key) {
 }
 void wyslij_karnet_do_kolejki(int msgid, struct Karnet *k) {
     struct msgBuf msg;
-    // Ustawiamy typ komunikatu (dowolna liczba > 0)
     msg.mtype = 1;
-    msg.kar = *k;   // skopiuj zawartość Karnetu
+    msg.kar = *k;
 
-    // Wysyłamy przez msgsnd
     if (msgsnd(msgid, &msg, sizeof(msg.kar), 0) == -1) {
         perror("msgsnd blad");
         exit(EXIT_FAILURE);
@@ -37,13 +39,15 @@ void usun_kolejke(int msgid) {
     }
     printf("Kolejka komunikatow (ID: %d) zostala usunieta.\n", msgid);
 }
-int odbierz_kolejke() {
-    int msgid = msgget(555, 0666);
-    if (msgid == -1) {
-        perror("[Narciarz] Blad msgget (otwieranie kolejki)");
+
+
+int dodaj_kolejke(int key) {
+    int id = msgget(key, 0600);
+    if (id == -1) {
+        perror("Nie moglem dodac kolejki komunikatow");
         exit(EXIT_FAILURE);
     }
-    return msgid;
+    return id;
 }
 
 #endif //QUEUE_H

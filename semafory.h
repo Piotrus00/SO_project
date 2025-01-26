@@ -8,9 +8,9 @@
 #include <errno.h>
 
 
-int utworz_nowy_semafor(int key) {
+int utworz_nowy_semafor(int key, int nsems) {
     int semafor;
-    semafor = semget(key, 2, 0777 | IPC_CREAT);
+    semafor = semget(key, nsems, 0600 | IPC_CREAT);
     if (semafor == -1) {
         printf("Nie moglem utworzyc nowego semafora.\n");
         exit(EXIT_FAILURE);
@@ -64,9 +64,9 @@ void usun_semafor(int semafor, int sem_num) {
     printf("Semafor zostal usuniety : %d\n", sem);
 }
 
-int dodaj_nowy_semafor(int key) {
+int dodaj_nowy_semafor(int key, int nsems) {
     int semafor;
-    semafor = semget(key, 2, 0777);
+    semafor = semget(key, nsems, 0600);
     if (semafor == -1) {
         printf("Nie moglem dodac nowego semafora.\n");
         exit(EXIT_FAILURE);
