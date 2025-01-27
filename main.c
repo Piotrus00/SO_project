@@ -86,10 +86,6 @@ int main() {
     pthread_detach(thread);
 
     exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-    exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-    exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-    exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-
     exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Peron", "Peron");
 
 
