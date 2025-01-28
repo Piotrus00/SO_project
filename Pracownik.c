@@ -96,7 +96,6 @@ int main() {
 
         struct MsgBuf2 buf;
 
-//WAZNE MSG TYPE DO WYRZUCENIA
 
         //odczyt z kolejki z prorytetem dla vipow
         //brani priorytetowo do krzeselek zgodnie z trescia zadania
