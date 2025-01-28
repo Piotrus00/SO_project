@@ -63,10 +63,10 @@ int main() {
     pthread_detach(thread);
 
     //uruchamianie kajsera mozliwosc obsugi kilku kas na raz
-    exe_a_proces("/home/kali/CLionProjects/untitled3/Kasjer", "Kasjer");
-    // exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-    // exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
-    // exe_a_proces("/home/kali/CLionProjects/untitled3/cmake-build-debug/Kasjer", "Kasjer");
+    // exe_a_proces("/home/kali/CLionProjects/untitled3/Kasjer", "Kasjer");
+    // exe_a_proces("/home/kali/CLionProjects/untitled3/Kasjer", "Kasjer");
+    // exe_a_proces("/home/kali/CLionProjects/untitled3/Kasjer", "Kasjer");
+    // exe_a_proces("/home/kali/CLionProjects/untitled3/Kasjer", "Kasjer");
 
     //uruchamianie Peronu
     exe_a_proces("/home/kali/CLionProjects/untitled3/Pracownik", "Pracownik");
@@ -139,12 +139,12 @@ void *time_simulation_thread(void *arg) {
     //w przypadku bledu program zabija wszystkich narciarzy
     //na stoku po uplywie 30sekund od zakonczenia dzialania peronu
     //dodatkowe mozna usunac
-    sleep(30);
-    printf("[LAWINA]!!!\n");
-    int status;
-    status = system("killall Narciarz");
-    if (status == -1) {
-        perror("Nie udało się zakończyć procesów Narciarz");
-    }
+    // sleep(30);
+    // printf("[LAWINA]!!!\n");
+    // int status;
+    // status = system("killall Narciarz");
+    // if (status == -1) {
+    //     perror("Nie udało się zakończyć procesów Narciarz");
+    // }
     return NULL;
 }

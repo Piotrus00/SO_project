@@ -8,6 +8,7 @@ struct Karnet {
     int id;
     int vip_status; // 1 - vip, 0 - zwykly
     int childs;
+    double price;
     int hours;
     int min;
     int sec;

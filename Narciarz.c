@@ -210,7 +210,7 @@ void zapis(struct Karnet k) {
         perror("Blad otwarcia pliku");
         exit(EXIT_FAILURE);
     }
-    fprintf(plik, "ID: %d, VIP: %d, Godzina: %02d:%02d:%02d\n", k.id, k.vip_status, k.hours, k.min, k.sec);
+    fprintf(plik, "ID: %d, VIP: %d, Cena: %.2lfzl, Godzina: %02d:%02d:%02d\n", k.id, k.vip_status,k.price, k.hours, k.min, k.sec);
     fclose(plik);
 }
 

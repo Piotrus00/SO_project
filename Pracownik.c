@@ -42,6 +42,7 @@ void start_queue_handler(int signo);
 void* wjazd_krzeselek(void* args);
 
 int main() {
+    printf("Pracownik %d w gotowosci!\n", getpid());
     //klucze
     key_t kol_nrm_narciarz_prac = 9001;
     key_t kol_vip_narciarz_prac = 9002;
@@ -62,6 +63,7 @@ int main() {
     int i = 0;
     int remain;
     int grupa;
+    int obieg_krzeselek=0;
 
     //przylaczenie/utworzenie pamieci dzielonej
     upd(key_pd_narciarz_pracownik, 20);
@@ -81,7 +83,7 @@ int main() {
     semctl(s_krzeselka_count, 0, SETVAL, 40);
 
     //petla wykonujaca sie do zakonczenia czasu dzialania stacji i do momentu gdy peron jest pusty
-    while (!(adres2[0] == -1 && adres[3] < 1)){
+    while (1){
         while (queueStopped) {
             sleep(1);
         }
@@ -138,6 +140,15 @@ int main() {
             grupa += 1 + buf.k.childs;
             zapis(buf.k);
         }
+
+        //przed zakonczeniem pracownik czeka az krzeselka wykonaja 1 pelny obieg zeby napewno nikt nie zostal
+        if (adres2[0]==-1 && adres[3]<1  && tab[0] == 0 && tab[1]==0 && tab[2]==0) {
+            obieg_krzeselek++;
+            if (obieg_krzeselek>=40) {
+                break;
+            }
+        }
+
 
         //usuwamy osoby z peronu bo wsiadaja do krzeselek
         semafor_p(s_peron, 0);
@@ -204,8 +215,9 @@ void* wjazd_krzeselek(void* args) {
         while (queueStopped) {
             usleep(20000);
         }
-        usleep(5000);
+        usleep(50000);
     }
+    printf("[krzeselko] jade!!\n");
 
     // Po dojechaniu na górę wysyłamy powiadomienia dla każdego
     // z 3 miejsc w krześle jezeli krzeselka nie sa puste (jeśli != 0)

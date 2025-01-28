@@ -37,6 +37,7 @@ int generateRandomNumber(int min, int max);
 double ticket_price(double total_price, double time, int age, int vip, int dzieci);
 
 int main() {
+    printf("Kajser %d w gotowosci\n", getpid());
     signal(SIGCHLD, sigchld_handler); // Obsługa SIGCHLD
     struct Karnet karnet;
     //klucze
@@ -80,7 +81,7 @@ int main() {
     //konczy sie gdy czas dzialania stacji dobiegnie konca
     while (1) {
         //losowy czas przyjscia klienta
-        sleep(generateRandomNumber(1,2));
+        usleep(generateRandomNumber(5000,15000));
         // Generowanie przykładowych danych
         int age = generateRandomNumber(9, 90);
         if (age > 18) {
@@ -124,6 +125,7 @@ int main() {
         karnet.id = id;
         karnet.vip_status = vip;
         karnet.childs = child;
+        karnet.price = sum_price;
         karnet.hours = saved;
         karnet.min = min;
         karnet.sec = sec;
@@ -136,7 +138,6 @@ int main() {
         //uruchamianie procesu narciarza ktory odbierze swoj karnet
         exe_a_proces("/home/kali/CLionProjects/untitled3/Narciarz", "Narciarz");
         amount++;
-        // dodac plik tekstowy z danymi karnetu i cena do raportu tak to juz raczej gotowy
     }
     //kasjer czeka az wszyscy narciarze opuszcza stacje zeby zamknac
     int status;
