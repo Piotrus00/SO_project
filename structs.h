@@ -19,4 +19,27 @@ struct msgBuf {
     struct Karnet kar;
 };
 
+// Struktura wiadomości w kolejce 2 taka sama dla przejrzystosci
+struct MsgBuf2 {
+    long mtype;
+    struct Karnet k;
+};
+
+struct MsgBufDone {
+    long mtype;        // k.id
+    int id;   // powtórzone k.id
+};
+
+// Struktura przekazywana do wątku
+typedef struct {
+    int tablica[3];
+    int key;
+} id_na_krzeselku;
+
+struct MsgNarciarz {
+    long mtype;
+    struct Karnet k;
+};
+
+
 #endif //STRUCTS_H
