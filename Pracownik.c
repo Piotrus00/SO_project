@@ -16,7 +16,6 @@
 pthread_mutex_t mutex_queue = PTHREAD_MUTEX_INITIALIZER; // Mutex do synchronizacji dostępu do kolejki
 
 int s_krzeselka_count;
-int N = 20;
 
 volatile sig_atomic_t queueStopped = 0;
 
